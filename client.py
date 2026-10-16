@@ -1,3 +1,10 @@
+# notes:
+# create documentation for the client.py file
+# create a tools handler for the tools that the AI can use
+# create a Prompt folder for AI prompts
+# create a skill folder for AI skills
+# workspace folder?
+
 from openai import OpenAI
 ProgramRunning = True
 
@@ -21,10 +28,6 @@ system_prompt = '''List of tools for you to use: New_note(title, content) and Ca
 
 models_page = openai.models.list()
 
-response = openai.chat.completions.create(
-            model=model,
-            messages=[{'role': 'system', 'content': system_prompt}]
-        )
 
 
 # Game loop.
