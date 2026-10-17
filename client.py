@@ -20,10 +20,9 @@ history = ""
 # --------------
 system_prompt = '''List of tools for you to use: New_note(title, content) and Calendar_add_event(title, content, start_time, end_time)
 \n If the user makes a request that matches these tools, follow these steps:\n
-1. Ask the user for permission to use the tool. you only need to do this once
-2. if they reply with yes, replace the arguments within the tool with the coresponding information as requested by the user.
-3. Use the tool by replying with the tool call by itself. The tool handeler will execute your tool call when it is seen in your response.
-4. Give the user a confirmation that the tool was executed.'''
+1. replace the arguments within the tool with the coresponding information as requested by the user.
+2. Use the tool by replying with the tool call by itself. The tool handeler will execute your tool call when it is seen in your response.
+3. Give the user a confirmation that the tool was executed.'''
 
 
 models_page = openai.models.list()
@@ -48,7 +47,7 @@ while ProgramRunning:
         for model in models_page.data:
             print(f"- {model.id}")
     elif (cmd == "/clear"):
-        history == ""
+        history = ""
         print("\nContext cleared!\n")
 
     elif (cmd == "/exit"):
