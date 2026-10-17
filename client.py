@@ -7,11 +7,15 @@
 
 from openai import OpenAI
 ProgramRunning = True
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
+endpoint = os.getenv("OPENAI_ENDPOINT")
+api_key = os.getenv("OPENAI_API_KEY")
 
 openai = OpenAI(
-    base_url="http://elytra.zone:11434/v1",
-    api_key="72326e10c2dc53610c02a3058093be68582c5587",  # Required by the SDK, but unused by local server
+    base_url=endpoint,
+    api_key=api_key,  # Required by the SDK, but unused by local server
 )
 model = "gemma3:12b"
 history = ""
