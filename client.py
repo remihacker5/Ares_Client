@@ -96,9 +96,8 @@ while ProgramRunning:
         )
 
 
-        if tools.check_for_tool_call(response.choices[0].message.content)[0]:
-            tool_call = tools.check_for_tool_call(response.choices[0].message.content)[1]
-            print(f"Tool call detected: {tool_call}")
+        if tools.validate_tool_call(response.choices[0].message.content):
+            tools.execute_tool_call(response.choices[0].message.content)
         # Store the history so the model can keep context across turns.
         context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n"
 
