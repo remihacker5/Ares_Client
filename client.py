@@ -97,7 +97,21 @@ while ProgramRunning:
 
 
         if tools.validate_tool_call(response.choices[0].message.content):
-            tools.execute_tool_call(response.choices[0].message.content)
+            tool_resp = tools.execute_tool_call(response.choices[0].message.content)
+            if isinstance(tool_resp, str):
+                        response = openai.chat.completions.create(
+                        model=model,
+                        messages=[
+                        {'role': 'system', 'content': system_prompt},
+                        {'role': 'user', 'content': context + prompt + tool_resp}
+                        ]
+            )           
+                        context = context + prompt + ";\n\n" + tool_resp + response.choices[0].message.content + ";\n\n"
+                        if tools.validate_tool_call(response.choices[0].message.content):
+                            tool_resp = tools.execute_tool_call(response.choices[0].message.content)
+
+                        context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n"
+
         # Store the history so the model can keep context across turns.
         context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n"
 

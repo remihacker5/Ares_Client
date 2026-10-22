@@ -15,7 +15,10 @@ available_tools = {"create_note",
 }
 # main structure for validation
 def validate_tool_call(raw_prompt):
-    prompt = strip_json(raw_prompt)
+    try:
+        prompt = strip_json(raw_prompt)
+    except ValueError:
+        return False
     try:
         check_syntax(prompt)
     except:
@@ -30,27 +33,25 @@ def validate_tool_call(raw_prompt):
 def execute_tool_call(raw_prompt):
     prompt = strip_json(raw_prompt)
     try:
-        execute_tool(prompt)
+        return execute_tool(prompt)
     except:
         print("Error: Failed to execute tool call.")
     
 
 def strip_json(text):
-    text = text.strip()
-    
-    if text.startswith("```json"):
-        newline = text.find("\n")
-        text = text[newline + 1:] if newline != -1 else text[7:]
-    text = text.rstrip()
-    
-    if text.startswith("```"):
-        newline = text.find("\n")
-        text = text[newline + 1:] if newline != -1 else text[3:]
-    text = text.rstrip()
-    
-    if text.endswith("```"):
-        text = text[:-3]
-    return text.strip()
+    """Return the first valid JSON object or array, excluding surrounding text."""
+    decoder = json.JSONDecoder()
+
+    for start, character in enumerate(text):
+        if character not in "{[":
+            continue
+        try:
+            _, end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            continue
+        return text[start:end]
+
+    raise ValueError("No valid JSON object or array found")
 
 def check_syntax(prompt):
     prompt = strip_json(prompt)
@@ -91,9 +92,9 @@ def check_for_tool(prompt):
             print("[validate] edit_note arguments are valid.")
         elif data["tool_name"] == "get_note":
             print("[validate] Checking get_note arguments.")
-            if "arg1" not in data["arguments"] and "arg2" not in data["arguments"]:
-                print("[validate] get_note is missing 'arg1' or 'arg2'.")
-                return False, "Error: Missing 'arg1' or 'arg2' for get_note"
+            if "arg1" not in data["arguments"]:
+                print("[validate] get_note is missing 'arg1'.")
+                return False, "Error: Missing 'arg1' for get_note"
             print("[validate] get_note arguments are valid.")
         elif data["tool_name"] == "delete_note":
             print("[validate] Checking delete_note arguments.")
@@ -121,7 +122,11 @@ def execute_tool(prompt):
         
     elif data["tool_name"] == "get_note":
         with open(f'workspace/notes/{data["arguments"]["arg1"]}.txt', 'r') as file:
-            return file.read()
+            content = file.read()
+            print(f"reading {data['arguments']['arg1']}.txt....")
+            return "\n\n This is the content of the note from get_note: " + content + "\n\n Finish the user's request with this content."
+
+
         
     elif data["tool_name"] == "delete_note":
         os.remove(f'workspace/notes/{data["arguments"]["arg1"]}.txt')

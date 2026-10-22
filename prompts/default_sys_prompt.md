@@ -49,8 +49,7 @@ get_note
 {
   "tool_name": "get_note",
   "arguments": {
-    "arg1": "insert_note_name_to_search",
-    "arg2": "insert_note_content_to_search"
+    "arg1": "insert_note_name_to_search"
   }
 }
 Use this tool to search for a note by name or content.
