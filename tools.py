@@ -53,6 +53,8 @@ def strip_json(text):
 
     raise ValueError("No valid JSON object or array found")
 
+
+
 def check_syntax(prompt):
     prompt = strip_json(prompt)
     try:
@@ -77,7 +79,6 @@ def check_for_tool(prompt):
         return False, f"Error: Tool '{data['tool_name']}' is not available"
     else:
         if data["tool_name"] == "create_note":
-            print("[validate] Checking create_note arguments.")
             if "arg1" not in data["arguments"] or "arg2" not in data["arguments"]:
                 print("[validate] create_note is missing required arguments.")
                 return False, "Error: Missing required arguments for create_note"
@@ -85,26 +86,23 @@ def check_for_tool(prompt):
                 print("[validate] create_note arguments must be strings.")
                 return False, "Error: Arguments for create_note must be strings"
         elif data["tool_name"] == "edit_note":
-            print("[validate] Checking edit_note arguments.")
+
             if "arg1" not in data["arguments"] or "arg2" not in data["arguments"] or "arg3" not in data["arguments"]:
                 print("[validate] edit_note is missing required arguments.")
                 return False, "Error: Missing required arguments for edit_note"
-            print("[validate] edit_note arguments are valid.")
+
         elif data["tool_name"] == "get_note":
-            print("[validate] Checking get_note arguments.")
+
             if "arg1" not in data["arguments"]:
                 print("[validate] get_note is missing 'arg1'.")
                 return False, "Error: Missing 'arg1' for get_note"
-            print("[validate] get_note arguments are valid.")
+
         elif data["tool_name"] == "delete_note":
-            print("[validate] Checking delete_note arguments.")
+
             if "arg1" not in data["arguments"]:
                 print("[validate] delete_note is missing 'arg1'.")
                 return False, "Error: Missing 'arg1' for delete_note"
-            print("[validate] delete_note arguments are valid.")
 
-    # If all checks pass
-    print(f"[validate] Tool call is valid!")
     
     return True
 
@@ -124,7 +122,7 @@ def execute_tool(prompt):
         with open(f'workspace/notes/{data["arguments"]["arg1"]}.txt', 'r') as file:
             content = file.read()
             print(f"reading {data['arguments']['arg1']}.txt....")
-            return "\n\n This is the content of the note from get_note: " + content + "\n\n Finish the user's request with this content."
+            return "\n\n This is the content of the note from get_note: " + content + "\n\n Ignore previous context on this note, answer the user's request with the provided content."
 
 
         

@@ -52,7 +52,6 @@ While Program running:
 
 from openai import OpenAI
 import tools
-ProgramRunning = True
 import os
 from dotenv import load_dotenv
 
@@ -71,22 +70,24 @@ openai = OpenAI(
     api_key=api_key,
 )
 
+# Fetch the list of available models from the local OpenAI-compatible server.
+models_page = openai.models.list()
+
 # Model name used for chat completions.
-model = "gemma3:12b"
+model = "gemma4:12b"
 
 # Conversation memory. This keeps the prior chat context between prompts.
 context = ""
+
+msg_has_tool = False
 
 # Load the default system prompt used to steer the model's behavior.
 with open('prompts/default_sys_prompt.md', 'r', encoding='utf-8') as prompt_file:
     system_prompt = prompt_file.read()
 
-# Fetch the list of available models from the local OpenAI-compatible server.
-models_page = openai.models.list()
 
 
-
-# Game loop.
+# Chat loop.
 while ProgramRunning:
 
     # Get prompt from user
@@ -98,7 +99,8 @@ while ProgramRunning:
         print('''\nAvailable commands:\n
         /help - See all available commands.\n
         /models - List all available models\n
-        /clear - Clear AI context (New Chat)
+        /clear - Clear AI context (New Chat)\n
+        /context - Show current context\n
         /exit - Exit Ares client.''')   
     elif (prompt == "/models"):
         # Print the name of each model
@@ -109,10 +111,16 @@ while ProgramRunning:
         # Reset the conversation memory so the model starts fresh.
         context = ""
         print("\nContext cleared!\n")
+        
+    elif (prompt == "/context"):
+        # Print the current conversation memory.
+        print("\nCurrent context:\n")
+        print(context)
     elif (prompt == "/exit"):
         # Gracefully quit the client loop.
         print("See ya!")
         ProgramRunning = False
+
 
     # If the input is not a command, send it to the model and print the reply.
     else:
@@ -124,22 +132,28 @@ while ProgramRunning:
             ]
         )
 
-
+                                        
         if tools.validate_tool_call(response.choices[0].message.content):
+            msg_has_tool = True
+        
+        while msg_has_tool:
             tool_resp = tools.execute_tool_call(response.choices[0].message.content)
             if isinstance(tool_resp, str):
+                        context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n" + tool_resp
                         response = openai.chat.completions.create(
                         model=model,
                         messages=[
                         {'role': 'system', 'content': system_prompt},
-                        {'role': 'user', 'content': context + prompt + tool_resp}
-                        ]
-            )           
-                        context = context + prompt + ";\n\n" + tool_resp + response.choices[0].message.content + ";\n\n"
+                        {'role': 'user', 'content': context}
+                        ])
+                        
                         if tools.validate_tool_call(response.choices[0].message.content):
-                            tool_resp = tools.execute_tool_call(response.choices[0].message.content)
+                            continue
+                        else:
+                            msg_has_tool = False
+            else:
+                msg_has_tool = False
 
-                        context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n"
 
         # Store the history so the model can keep context across turns.
         context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n"
