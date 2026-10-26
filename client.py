@@ -20,6 +20,35 @@
     # if prompt contains command:
         # identify command
         # execute command
+########################################################
+
+'''General program structure:
+Get Variables and librarys
+Verify workspace
+Verify application file integrity
+
+While Program running:
+          scheduler_check()
+          get prompt input()
+          if prompt has /
+                    check for command and execute
+          else:
+                    send prompt to AI
+                    if AI response has tool call
+                              set prompt_has_tool true
+                    While prompt_has_tool
+                              Validate tool call
+                              Execute tool call
+                              if tool call returns more instructions
+                                        Add instructions to context
+                                        send prompt + context to AI
+                                        set prompt_has_tool true
+                              else
+                                        Set prompt_has_tool false
+
+                    strip og response of tool call json
+                    print response'''
+
 
 from openai import OpenAI
 import tools
