@@ -50,7 +50,7 @@ While Program running:
                     print response'''
 
 
-from openai import OpenAI
+from ollama import Client
 import tools
 import os
 from dotenv import load_dotenv
@@ -58,20 +58,23 @@ from dotenv import load_dotenv
 # Keep the main loop running until the user exits.
 ProgramRunning = True
 
-# Load local environment variables such as OPENAI_ENDPOINT and OPENAI_API_KEY.
+# Load local environment variables for the Ollama server.
 load_dotenv()
-endpoint = os.getenv("OPENAI_ENDPOINT")
-api_key = os.getenv("OPENAI_API_KEY")
-
-# Create the OpenAI client pointed at the configured local endpoint.
-# The API key may be required by the SDK even when the local server ignores it.
-openai = OpenAI(
-    base_url=endpoint,
-    api_key=api_key,
+endpoint = (
+    os.getenv("OLLAMA_HOST")
+    or os.getenv("OPENAI_ENDPOINT")
+    or "http://localhost:11434"
 )
+if endpoint.rstrip("/").endswith("/v1"):
+    endpoint = endpoint.rstrip("/")[:-3]
+api_key = os.getenv("OLLAMA_API_KEY") or os.getenv("OPENAI_API_KEY")
 
-# Fetch the list of available models from the local OpenAI-compatible server.
-models_page = openai.models.list()
+# Keep the API key optional for local servers that do not require authentication.
+headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+ollama_client = Client(host=endpoint, headers=headers)
+
+# Fetch available models from the configured Ollama-compatible server.
+models_page = ollama_client.list()
 
 # Model name used for chat completions.
 model = "gemma4:12b"
@@ -79,13 +82,30 @@ model = "gemma4:12b"
 # Conversation memory. This keeps the prior chat context between prompts.
 context = ""
 
-msg_has_tool = False
-
 # Load the default system prompt used to steer the model's behavior.
 with open('prompts/default_sys_prompt.md', 'r', encoding='utf-8') as prompt_file:
     system_prompt = prompt_file.read()
 
+def get_response(prompt):
+    response = ollama_client.chat(
+        model=model,
+        messages=[
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': context + prompt},
+        ],
+        options={"num_predict": 10096},
+        stream=True,
+    )
+    return response
 
+def stream_response(response):
+    content = []
+    for chunk in response:
+        text = chunk.message.content or ''
+        content.append(text)
+        print(text, end='', flush=True)
+    print()
+    return ''.join(content)
 
 # Chat loop.
 while ProgramRunning:
@@ -103,10 +123,10 @@ while ProgramRunning:
         /context - Show current context\n
         /exit - Exit Ares client.''')   
     elif (prompt == "/models"):
-        # Print the name of each model
+        # Print the name of each available model
         print("Available local models:")
-        for model in models_page.data:
-            print(f"- {model.id}")
+        for available_model in models_page.models:
+            print(f"- {available_model.model}")
     elif (prompt == "/clear"):
         # Reset the conversation memory so the model starts fresh.
         context = ""
@@ -124,40 +144,16 @@ while ProgramRunning:
 
     # If the input is not a command, send it to the model and print the reply.
     else:
-        response = openai.chat.completions.create(
-            model=model,
-            messages=[
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': context + prompt}
-            ]
-        )
+        response_text = stream_response(get_response(prompt))
 
-                                        
-        if tools.validate_tool_call(response.choices[0].message.content):
-            msg_has_tool = True
-        
-        while msg_has_tool:
-            tool_resp = tools.execute_tool_call(response.choices[0].message.content)
+        while tools.validate_tool_call(response_text):
+            tool_resp = tools.execute_tool_call(response_text)
             if isinstance(tool_resp, str):
-                        context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n" + tool_resp
-                        response = openai.chat.completions.create(
-                        model=model,
-                        messages=[
-                        {'role': 'system', 'content': system_prompt},
-                        {'role': 'user', 'content': context}
-                        ])
-                        
-                        if tools.validate_tool_call(response.choices[0].message.content):
-                            continue
-                        else:
-                            msg_has_tool = False
+                context = context + prompt + ";\n\n" + response_text + ";\n\n" + tool_resp
+                response_text = stream_response(get_response(""))
             else:
-                msg_has_tool = False
-
+                break
 
         # Store the history so the model can keep context across turns.
-        context = context + prompt + ";\n\n" + response.choices[0].message.content + ";\n\n"
-
-        # Print the assistant's response to the terminal.
-        print(response.choices[0].message.content)
+        context = context + prompt + ";\n\n" + response_text + ";\n\n"
         
